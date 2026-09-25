@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Hash DApp | Cryptographic & Perceptual Visual Similarity Analyzer</title>
+    <meta name="description" content="Decentralized application for verifying image integrity using SHA-256 cryptographic hashing and visual similarity using pHash/dHash perceptual hashes on-chain.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- External Libraries -->
+    <!-- Ethers.js v5 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <!-- imagehash-web CDN (Perceptual Hashing Library) -->
+    <script src="https://unpkg.com/imagehash-web/dist/imagehash-web.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navbar Header -->
+        <header class="main-header">
+            <div class="brand-container">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-fingerprint"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>ImageHash<span class="gradient-text">DApp</span></h1>
+                    <p>Cryptographic & Perceptual Integrity Suite</p>
+                </div>
+            </div>
+
+            <div class="header-controls">
+                <div class="network-badge-box">
+                    <span id="wallet-status-dot" class="status-dot status-simulated"></span>
+                    <span id="wallet-status-text">Simulated Node</span>
+                    <span id="mode-badge" class="badge badge-simulated">Simulated Mode</span>
+                </div>
+
+                <div class="mode-toggle-box">
+                    <label class="switch-label" title="Toggle between simulated Web3 test node & live MetaMask wallet">
+                        <input type="checkbox" id="simulated-toggle-cb" checked>
+                        <span class="slider round"></span>
+                        <span class="switch-text">Simulated Blockchain</span>
+                    </label>
+                </div>
+
+                <button id="connect-wallet-btn" class="btn btn-secondary">
+                    <i class="fa-solid fa-wallet"></i> Connect Wallet
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs Bar -->
+        <nav class="navigation-bar" aria-label="Main Navigation">
+            <div class="nav-tabs-wrapper">
+                <button class="nav-tab active" data-tab="tab-upload" id="tab-btn-upload">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Upload & Store</span>
+                </button>
+                <button class="nav-tab" data-tab="tab-compare" id="tab-btn-compare">
+                    <i class="fa-solid fa-code-compare"></i>
+                    <span>Compare Images</span>
+                    <span class="tab-pill">pHash Engine</span>
+                </button>
+                <button class="nav-tab" data-tab="tab-history" id="tab-btn-history">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Stored Hashes</span>
+                    <span class="badge-count" id="history-count-badge">0</span>
+                </button>
+                <div class="nav-indicator" id="nav-tab-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Main Tab Content Area -->
+        <main class="main-content">
+            
+            <!-- TAB 1: UPLOAD & STORE -->
+            <section id="tab-upload" class="tab-pane active">
+                <div class="pane-grid">
+                    <!-- Left: File Dropzone & Image Preview -->
+                    <div class="glass-card">
+                        <div class="card-header">
+                            <h2><i class="fa-solid fa-image"></i> Select Image</h2>
+                            <p class="subtitle">Upload an image to compute cryptographic & perceptual hashes</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="dropzone" id="upload-dropzone">
+                                <input type="file" id="upload-file-input" accept="image/*" class="file-input-hidden">
+                                <div class="dropzone-content" id="upload-dropzone-prompt">
+                                    <div class="upload-icon-circle">
+                                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                                    </div>
+                                    <h3>Drag & Drop Image Here</h3>
+                                    <p>or <span class="browse-link">browse files</span> from your computer</p>
+                                    <span class="file-limits">Supports PNG, JPG, WEBP, GIF, SVG</span>
+                                </div>
+                                <div class="preview-container hidden" id="upload-preview-box">
+                                    <img id="upload-preview-img" src="" alt="Selected Preview">
+                                    <button class="btn-icon btn-remove" id="upload-remove-btn" title="Remove image">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                    <div class="image-meta-bar" id="upload-image-meta">
+                                        <!-- Dynamic File Size & Resolution -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Hashes & Blockchain Anchor Form -->
+                    <div class="glass-card">
+                        <div class="card-header">
+                            <h2><i class="fa-solid fa-cube"></i> Hash Computation & On-Chain Anchor</h2>
+                            <p class="subtitle">Generates cryptographic SHA-256 and visual pHash/dHash</p>
+                        </div>
+                        <div class="card-body">
+                            <!-- Hashes Preview Panel -->
+                            <div class="hash-results-panel">
+                                <div class="hash-result-item">
+                                    <div class="hash-label">
+                                        <span><i class="fa-solid fa-shield-halved"></i> Cryptographic Hash (SHA-256)</span>
+                                        <span class="hash-tag tag-sha256">Exact File Integrity</span>
+                                    </div>
+                                    <div class="hash-code-box">
+                                        <code id="computed-sha256">-- Select Image First --</code>
+                                        <button class="btn-copy" data-copy-target="computed-sha256" title="Copy SHA-256">
+                                            <i class="fa-regular fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="hash-result-item">
+                                    <div class="hash-label">
+                                        <span><i class="fa-solid fa-eye"></i> Perceptual Hash (pHash)</span>
+                                        <span class="hash-tag tag-phash">DCT Frequency Similarity</span>
+                                    </div>
+                                    <div class="hash-code-box">
+                                        <code id="computed-phash">-- Select Image First --</code>
+                                        <button class="btn-copy" data-copy-target="computed-phash" title="Copy pHash">
+                                            <i class="fa-regular fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="hash-result-grid-2">
+                                    <div class="hash-result-item">
+                                        <div class="hash-label">
+                                            <span><i class="fa-solid fa-chart-line"></i> Difference Hash (dHash)</span>
+                                            <span class="hash-tag tag-dhash">Gradient</span>
+                                        </div>
+                                        <div class="hash-code-box">
+                                            <code id="computed-dhash">--</code>
+                                            <button class="btn-copy" data-copy-target="computed-dhash" title="Copy dHash">
+                                                <i class="fa-regular fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="hash-result-item">
+                                        <div class="hash-label">
+                                            <span><i class="fa-solid fa-calculator"></i> Average Hash (aHash)</span>
+                                            <span class="hash-tag tag-ahash">Intensity</span>
+                                        </div>
+                                        <div class="hash-code-box">
+                                            <code id="computed-ahash">--</code>
+                                            <button class="btn-copy" data-copy-target="computed-ahash" title="Copy aHash">
+                                                <i class="fa-regular fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Form for Storing On-Chain -->
+                            <form id="store-onchain-form" class="anchor-form margin-top-md">
+                                <div class="form-group">
+                                    <label for="image-title-input"><i class="fa-solid fa-heading"></i> Image Title</label>
+                                    <input type="text" id="image-title-input" placeholder="e.g. Original Art Prototype v1" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="image-author-input"><i class="fa-solid fa-user"></i> Owner Name <span style="color: var(--accent-rose);">*</span></label>
+                                    <input type="text" id="image-author-input" placeholder="e.g. Satoshi N." required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="image-notes-input"><i class="fa-solid fa-align-left"></i> Notes / Description</label>
+                                    <textarea id="image-notes-input" rows="2" placeholder="Optional background details or copyright notice"></textarea>
+                                </div>
+
+                                <div class="form-group">
+                                    <label><i class="fa-solid fa-network-wired"></i> IPFS Content Metadata URI</label>
+                                    <div class="input-readonly-box">
+                                        <span id="computed-ipfs-uri">ipfs://Qm... (Generates on upload)</span>
+                                    </div>
+                                </div>
+
+                                <button type="submit" id="store-submit-btn" class="btn btn-primary btn-block btn-lg" disabled>
+                                    <i class="fa-solid fa-cube"></i> Anchor Hashes to Blockchain
+                                </button>
+                            </form>
+
+                            <!-- Progress / Mining Status Box -->
+                            <div id="mining-status-box" class="mining-status-box hidden">
+                                <div class="mining-spinner"></div>
+                                <div class="mining-text">
+                                    <h4 id="mining-status-title">Broadcasting Transaction...</h4>
+                                    <p id="mining-status-desc">Simulating block confirmation on-chain...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: COMPARE IMAGES -->
+            <section id="tab-compare" class="tab-pane">
+                <div class="compare-header-card glass-card">
+                    <div class="compare-title">
+                        <h2><i class="fa-solid fa-code-compare"></i> Perceptual Visual Similarity Comparison</h2>
+                        <p>Compare two images to detect minor edits, resizing, compression, watermarks, or gradient differences using <strong>pHash & dHash</strong>.</p>
+                    </div>
+                    <div class="compare-actions">
+                        <button id="load-sample-btn" class="btn btn-secondary btn-sm">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Load Sample Images
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Side by Side Dropzones -->
+                <div class="compare-dual-grid margin-top-md">
+                    <!-- Image A Box -->
+                    <div class="glass-card compare-card">
+                        <div class="card-header header-image-a">
+                            <h3><i class="fa-solid fa-a"></i> Image A (Reference Base)</h3>
+                            <span class="badge badge-info" id="image-a-badge">Not Selected</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="dropzone compare-dropzone" id="dropzone-a">
+                                <input type="file" id="file-input-a" accept="image/*" class="file-input-hidden">
+                                <div class="dropzone-content" id="prompt-a">
+                                    <i class="fa-solid fa-image upload-icon"></i>
+                                    <h4>Drop Image A</h4>
+                                    <p>or click to select</p>
+                                </div>
+                                <div class="preview-container hidden" id="preview-box-a">
+                                    <img id="preview-img-a" src="" alt="Image A">
+                                    <button class="btn-icon btn-remove" id="remove-btn-a"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                            </div>
+                            <div class="compare-hash-summary hidden" id="hash-summary-a">
+                                <div class="summary-line"><span>SHA-256:</span> <code id="sha256-a-val">--</code></div>
+                                <div class="summary-line"><span>pHash:</span> <code id="phash-a-val">--</code></div>
+                                <div class="summary-line"><span>dHash:</span> <code id="dhash-a-val">--</code></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Image B Box -->
+                    <div class="glass-card compare-card">
+                        <div class="card-header header-image-b">
+                            <h3><i class="fa-solid fa-b"></i> Image B (Comparison Candidate)</h3>
+                            <span class="badge badge-info" id="image-b-badge">Not Selected</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="dropzone compare-dropzone" id="dropzone-b">
+                                <input type="file" id="file-input-b" accept="image/*" class="file-input-hidden">
+                                <div class="dropzone-content" id="prompt-b">
+                                    <i class="fa-solid fa-image upload-icon"></i>
+                                    <h4>Drop Image B</h4>
+                                    <p>or click to select</p>
+                                </div>
+                                <div class="preview-container hidden" id="preview-box-b">
+                                    <img id="preview-img-b" src="" alt="Image B">
+                                    <button class="btn-icon btn-remove" id="remove-btn-b"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                            </div>
+                            <div class="compare-hash-summary hidden" id="hash-summary-b">
+                                <div class="summary-line"><span>SHA-256:</span> <code id="sha256-b-val">--</code></div>
+                                <div class="summary-line"><span>pHash:</span> <code id="phash-b-val">--</code></div>
+                                <div class="summary-line"><span>dHash:</span> <code id="dhash-b-val">--</code></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compare Run Button -->
+                <div class="text-center margin-top-md margin-bottom-md">
+                    <button id="run-compare-btn" class="btn btn-primary btn-lg" disabled>
+                        <i class="fa-solid fa-microscope"></i> Compute & Compare Perceptual Hashes
+                    </button>
+                </div>
+
+                <!-- Interactive Visual Overlay Diff Split Slider -->
+                <div id="visual-diff-section" class="glass-card hidden margin-bottom-md">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-sliders"></i> Interactive Visual Diff Inspector</h3>
+                        <p>Drag the center slider to visually compare Image A & Image B pixel alignments</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="image-split-container" id="image-split-wrapper">
+                            <img id="split-img-a" src="" alt="Image A Base">
+                            <div class="split-overlay-wrapper" id="split-overlay">
+                                <img id="split-img-b" src="" alt="Image B Overlay">
+                            </div>
+                            <div class="split-handle" id="split-handle">
+                                <div class="split-handle-line"></div>
+                                <div class="split-handle-button"><i class="fa-solid fa-arrows-left-right"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparison Results Dashboard -->
+                <div id="compare-results-section" class="glass-card hidden">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-chart-pie"></i> Visual Similarity Results</h2>
+                        <div id="verdict-badge-box" class="verdict-box">
+                            <span class="verdict-label">Verdict:</span>
+                            <span id="verdict-badge" class="badge badge-lg">Evaluating...</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Key Verdict Banner -->
+                        <div class="verdict-banner" id="verdict-banner">
+                            <div class="verdict-banner-icon"><i class="fa-solid fa-circle-check"></i></div>
+                            <div class="verdict-banner-content">
+                                <h3 id="verdict-title">Analysis Complete</h3>
+                                <p id="verdict-explanation">Evaluating pHash hamming distance...</p>
+                            </div>
+                        </div>
+
+                        <!-- Metrics Grid -->
+                        <div class="metrics-grid margin-top-md">
+                            <!-- Similarity Percentage Meter -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <i class="fa-solid fa-percent"></i> Similarity Score
+                                </div>
+                                <div class="metric-value" id="metric-similarity-score">0.0%</div>
+                                <div class="progress-bar-bg">
+                                    <div class="progress-bar-fill" id="similarity-progress-fill" style="width: 0%;"></div>
+                                </div>
+                                <div class="metric-footer">
+                                    <span>Based on 64-bit DCT pHash</span>
+                                </div>
+                            </div>
+
+                            <!-- pHash Hamming Distance -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <i class="fa-solid fa-ruler-combined"></i> pHash Hamming Distance
+                                </div>
+                                <div class="metric-value" id="metric-phash-distance">0</div>
+                                <div class="distance-scale">
+                                    <span class="scale-point point-good" title="0-5: Highly Similar">≤5</span>
+                                    <span class="scale-point point-mid" title="6-10: Somewhat Similar">≤10</span>
+                                    <span class="scale-point point-bad" title=">10: Different">>10</span>
+                                </div>
+                                <div class="metric-footer">
+                                    <span>Number of differing bits (0 = match)</span>
+                                </div>
+                            </div>
+
+                            <!-- dHash Hamming Distance -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <i class="fa-solid fa-chart-line"></i> dHash Distance
+                                </div>
+                                <div class="metric-value" id="metric-dhash-distance">0</div>
+                                <div class="metric-footer">
+                                    <span>Adjacent Gradient Difference</span>
+                                </div>
+                            </div>
+
+                            <!-- SHA-256 Match Indicator -->
+                            <div class="metric-card">
+                                <div class="metric-header">
+                                    <i class="fa-solid fa-shield-halved"></i> Cryptographic SHA-256
+                                </div>
+                                <div class="metric-value" id="metric-sha256-match">Match</div>
+                                <div class="metric-footer">
+                                    <span>Exact Byte Level Verification</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Detailed Comparison Table -->
+                        <div class="table-responsive margin-top-md">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Hash Algorithm</th>
+                                        <th>Image A (Base)</th>
+                                        <th>Image B (Candidate)</th>
+                                        <th>Hamming Distance</th>
+                                        <th>Similarity %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>SHA-256</strong> <small>(Cryptographic)</small></td>
+                                        <td><code id="table-sha256-a" class="code-sm">--</code></td>
+                                        <td><code id="table-sha256-b" class="code-sm">--</code></td>
+                                        <td><span id="table-sha256-diff" class="badge">--</span></td>
+                                        <td><span id="table-sha256-pct">--</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>pHash</strong> <small>(Perceptual DCT)</small></td>
+                                        <td><code id="table-phash-a" class="code-sm">--</code></td>
+                                        <td><code id="table-phash-b" class="code-sm">--</code></td>
+                                        <td><span id="table-phash-diff" class="badge">--</span></td>
+                                        <td><span id="table-phash-pct">--</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>dHash</strong> <small>(Difference Gradient)</small></td>
+                                        <td><code id="table-dhash-a" class="code-sm">--</code></td>
+                                        <td><code id="table-dhash-b" class="code-sm">--</code></td>
+                                        <td><span id="table-dhash-diff" class="badge">--</span></td>
+                                        <td><span id="table-dhash-pct">--</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>aHash</strong> <small>(Average Intensity)</small></td>
+                                        <td><code id="table-ahash-a" class="code-sm">--</code></td>
+                                        <td><code id="table-ahash-b" class="code-sm">--</code></td>
+                                        <td><span id="table-ahash-diff" class="badge">--</span></td>
+                                        <td><span id="table-ahash-pct">--</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Technical Reference / Threshold Legend -->
+                        <div class="reference-info-box margin-top-md">
+                            <h4><i class="fa-solid fa-circle-info"></i> How Perceptual Hash Thresholds Work</h4>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <strong>Hamming Distance ≤ 5:</strong>
+                                    <p>High visual similarity. The images are likely identical or modified only by resolution downscaling, WebP/JPG compression, or subtle color grade shifts.</p>
+                                </div>
+                                <div class="info-item">
+                                    <strong>Hamming Distance 6 - 10:</strong>
+                                    <p>Moderate visual similarity. The images share structure but have experienced cropping, watermarking, filters, or rotation tweaks.</p>
+                                </div>
+                                <div class="info-item">
+                                    <strong>Hamming Distance > 10:</strong>
+                                    <p>Visually distinct images. High bit difference indicates separate subjects or structural redesign.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: STORED HASHES (HISTORY) -->
+            <section id="tab-history" class="tab-pane">
+                <div class="glass-card">
+                    <div class="card-header history-header">
+                        <div>
+                            <h2><i class="fa-solid fa-database"></i> Stored Hashes History</h2>
+                            <p class="subtitle">Stored on-chain and cached in browser localStorage under <code>imageHashHistory</code></p>
+                        </div>
+                        <div class="history-actions">
+                            <button id="export-history-btn" class="btn btn-secondary btn-sm">
+                                <i class="fa-solid fa-download"></i> Export JSON
+                            </button>
+                            <button id="clear-history-btn" class="btn btn-danger-outline btn-sm">
+                                <i class="fa-solid fa-trash-can"></i> Clear History
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <!-- Search & Filter Controls -->
+                        <div class="filter-bar">
+                            <div class="search-input-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="history-search-input" placeholder="Search by title, filename, SHA-256, or pHash...">
+                            </div>
+                            <div class="filter-select-box">
+                                <select id="history-sort-select">
+                                    <option value="newest">Sort: Newest First</option>
+                                    <option value="oldest">Sort: Oldest First</option>
+                                    <option value="title">Sort: Title A-Z</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- History Data Table -->
+                        <div class="table-responsive margin-top-sm">
+                            <table class="data-table history-table" id="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Preview</th>
+                                        <th>Title & File</th>
+                                        <th>SHA-256 Hash</th>
+                                        <th>Perceptual pHash</th>
+                                        <th>Timestamp</th>
+                                        <th>Status / Tx</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-tbody">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+
+                            <!-- Empty State -->
+                            <div id="history-empty-state" class="empty-state">
+                                <i class="fa-solid fa-box-open"></i>
+                                <h3>No Stored Hashes Found</h3>
+                                <p>Anchored image hashes will automatically appear here once submitted.</p>
+                                <button class="btn btn-primary btn-sm margin-top-sm" onclick="document.getElementById('tab-btn-upload').click()">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i> Go to Upload & Store
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="main-footer">
+            <div class="footer-content">
+                <p class="footer-title"><i class="fa-solid fa-graduation-cap"></i> <strong>MLBC Mini Project — SAPA</strong></p>
+                <p class="footer-sub">Image Hash DApp &copy; 2026 | MLBC Mini Project | Powered by Ethereum, Web Crypto API &amp; <code>imagehash-web</code></p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Notification Toasts Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- JavaScript Application Entry -->
+    <script src="hash-engine.js"></script>
+    <script src="web3-handler.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
