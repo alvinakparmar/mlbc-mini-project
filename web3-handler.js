@@ -59,26 +59,12 @@ window.Web3Handler = (function () {
     }
 
     /**
-     * Connect MetaMask wallet safely with silent eth_accounts check & pending request locks
+     * Connect MetaMask wallet safely & prompt account selection modal
      */
     async function connectWallet() {
         if (!window.ethereum) {
             throw new Error("MetaMask extension not found. Running in Simulated Blockchain Mode.");
         }
-
-        // Check if accounts are already connected (silent check, no popup)
-        try {
-            const existing = await window.ethereum.request({ method: "eth_accounts" });
-            if (existing && existing.length > 0) {
-                userAddress = existing[0];
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                signer = provider.getSigner();
-                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-                isSimulatedMode = false;
-                updateUIStatus();
-                return { address: userAddress, isSimulated: false };
-            }
-        } catch (e) {}
 
         if (isConnecting) {
             throw new Error("MetaMask request is already pending. Click your browser extension icon to approve!");
@@ -86,6 +72,20 @@ window.Web3Handler = (function () {
 
         isConnecting = true;
         try {
+            // Force MetaMask account selection modal (EIP-2255) so user can pick from multiple accounts
+            try {
+                await window.ethereum.request({
+                    method: "wallet_requestPermissions",
+                    params: [{ eth_accounts: {} }]
+                });
+            } catch (permErr) {
+                if (permErr.code === 4001) {
+                    isConnecting = false;
+                    throw new Error("Account selection was cancelled.");
+                }
+                console.warn("wallet_requestPermissions notice:", permErr);
+            }
+
             const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
             if (accounts && accounts.length > 0) {
                 userAddress = accounts[0];
@@ -228,7 +228,7 @@ window.Web3Handler = (function () {
             if (isSimulatedMode) {
                 statusText.innerText = `Simulated Node (Block #${blockNumber})`;
                 if (statusDot) statusDot.className = "status-dot status-simulated";
-                if (walletBtn) walletBtn.innerText = "Connect MetaMask";
+                if (walletBtn) walletBtn.innerHTML = `<i class="fa-solid fa-wallet"></i> Connect Wallet`;
                 if (modeBadge) {
                     modeBadge.innerText = "Simulated Blockchain";
                     modeBadge.className = "badge badge-simulated";
@@ -237,7 +237,7 @@ window.Web3Handler = (function () {
                 const shortAddr = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
                 statusText.innerText = `Connected: ${shortAddr}`;
                 if (statusDot) statusDot.className = "status-dot status-active";
-                if (walletBtn) walletBtn.innerText = shortAddr;
+                if (walletBtn) walletBtn.innerHTML = `<i class="fa-solid fa-wallet"></i> ${shortAddr} (Switch)`;
                 if (modeBadge) {
                     modeBadge.innerText = "Web3 Active";
                     modeBadge.className = "badge badge-success";
